@@ -60,6 +60,7 @@ public class LoginActivity extends AppCompatActivity {
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putString("USER_ID", user.getId());
                     editor.putString("USER_NAME", user.getFullName());
+                    editor.putString("USER_ROLE", role);
                     editor.apply();
 
                     Toast.makeText(LoginActivity.this, "Welcome " + user.getFullName(), Toast.LENGTH_SHORT).show();
@@ -92,7 +93,6 @@ public class LoginActivity extends AppCompatActivity {
             Toast.makeText(this, "Who are you???!!!: " + role, Toast.LENGTH_SHORT).show();
             return;
         }
-
 
         startActivity(intent);
         finish();

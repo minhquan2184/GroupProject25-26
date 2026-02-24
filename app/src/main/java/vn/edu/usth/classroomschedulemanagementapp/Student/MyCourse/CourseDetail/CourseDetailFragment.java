@@ -69,6 +69,12 @@ public class CourseDetailFragment extends Fragment {
             }
         });
 
+        // Ẩn nút "Add Document" vì Student không được phép thêm tài liệu
+        View btnAddDoc = view.findViewById(R.id.btnAddDoc);
+        if (btnAddDoc != null) {
+            btnAddDoc.setVisibility(View.GONE);
+        }
+
         // Setup RecyclerView Attendance
         rcvAttendance = view.findViewById(R.id.rcvAttendance);
         rcvAttendance.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -85,20 +91,36 @@ public class CourseDetailFragment extends Fragment {
         SharedPreferences prefs = getActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String studentId = prefs.getString("USER_ID", "");
 
-        if (studentId.isEmpty() || classId == null) return;
+        android.util.Log.d("ATTENDANCE_DEBUG", "classId=" + classId + ", studentId=" + studentId);
+
+        if (studentId.isEmpty() || classId == null) {
+            android.util.Log.e("ATTENDANCE_DEBUG", "Missing data! studentId=" + studentId + ", classId=" + classId);
+            return;
+        }
 
         RetrofitClient.getService().getAttendance(classId, studentId).enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
+                android.util.Log.d("ATTENDANCE_DEBUG", "Response code: " + response.code());
                 if (response.isSuccessful() && response.body() != null) {
+                    android.util.Log.d("ATTENDANCE_DEBUG", "Records received: " + response.body().size());
                     attendanceList.clear();
                     attendanceList.addAll(response.body());
                     adapter.notifyDataSetChanged();
+                } else {
+                    android.util.Log.e("ATTENDANCE_DEBUG", "Response failed or empty. Code: " + response.code());
+                    try {
+                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "null";
+                        android.util.Log.e("ATTENDANCE_DEBUG", "Error body: " + errorBody);
+                    } catch (Exception e) {
+                        android.util.Log.e("ATTENDANCE_DEBUG", "Could not read error body");
+                    }
                 }
             }
 
             @Override
             public void onFailure(Call<List<Attendance>> call, Throwable t) {
+                android.util.Log.e("ATTENDANCE_DEBUG", "Network failure: " + t.getMessage());
                 if (getContext() != null) {
                     Toast.makeText(getContext(), "Error loading attendance", Toast.LENGTH_SHORT).show();
                 }

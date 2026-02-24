@@ -13,8 +13,12 @@ import vn.edu.usth.classroomschedulemanagementapp.Student.AllCourse.Subject;
 import vn.edu.usth.classroomschedulemanagementapp.Student.MyCourse.CourseDetail.Attendance;
 import vn.edu.usth.classroomschedulemanagementapp.Student.Account.UserProfile;
 import vn.edu.usth.classroomschedulemanagementapp.Student.Account.StudentGrade;
+import vn.edu.usth.classroomschedulemanagementapp.Lecturer.LecturerSubject;
+import vn.edu.usth.classroomschedulemanagementapp.Lecturer.LecturerClass;
+import vn.edu.usth.classroomschedulemanagementapp.Lecturer.StudentInfo;
 
 public interface ApiService {
+
     @POST("/api/login")
     Call<User> login(@Body LoginRequest request);
 
@@ -33,11 +37,24 @@ public interface ApiService {
     @GET("/api/my-courses/{userId}")
     Call<List<Subject>> getMyCourses(@Path("userId") String userId);
 
+    @GET("/api/lecturer-courses/{userId}")
+    Call<List<Subject>> getLecturerCourses(@Path("userId") String userId);
+
+    @GET("/api/lecturer-subjects/{lecturerId}")
+    Call<List<LecturerSubject>> getLecturerSubjects(@Path("lecturerId") String lecturerId);
+
+    @GET("/api/lecturer-subject-classes/{lecturerId}/{subjectId}")
+    Call<List<LecturerClass>> getLecturerSubjectClasses(@Path("lecturerId") String lecturerId, @Path("subjectId") String subjectId);
+
+    @GET("/api/class-students/{classId}")
+    Call<List<StudentInfo>> getClassStudents(@Path("classId") String classId);
+
     @GET("/api/schedule/{userId}")
     Call<List<ScheduleResponse>> getStudentSchedule(@Path("userId") String userId);
 
     @GET("/api/attendance")
     Call<List<Attendance>> getAttendance(@Query("classId") String classId, @Query("studentId") String studentId);
+
     @GET("/api/students/search")
     Call<List<StudentSearchResponse>> searchStudents(@Query("name") String name);
 
@@ -46,14 +63,18 @@ public interface ApiService {
 
     @POST("/api/attendance/submit")
     Call<Void> submitAttendance(@Body AttendanceSubmission submission);
+
     @POST("/api/attendance/remove-students")
     Call<Void> removeStudents(@Body DeleteRequest request);
+
     @POST("/api/attendance/add-student")
     Call<Void> addStudentToClass(@Body AddStudentRequest request);
+
     @POST("/api/document")
     Call<Void> uploadDocument(@Body DocumentRequest request);
 
     class DocumentRequest {
+
         String courseName;
         String title;
         String url;
@@ -66,12 +87,14 @@ public interface ApiService {
     }
 
     class StudentSearchResponse {
+
         public String id;
         public String fullName;
         public String studentCode;
     }
 
     class StudentAttendanceInfo {
+
         public String attendanceId;  // Added missing field
         public String studentId;
         public String id;
@@ -81,6 +104,7 @@ public interface ApiService {
     }
 
     class AttendanceSubmission {
+
         public String scheduleId;
         public List<AttendanceRecordJson> records;
 
@@ -91,6 +115,7 @@ public interface ApiService {
     }
 
     class AttendanceRecordJson {
+
         String studentId;
         String status;
 
@@ -99,7 +124,9 @@ public interface ApiService {
             this.status = status;
         }
     }
+
     class DeleteRequest {
+
         public String scheduleId;
         public List<String> studentIds;
 
@@ -108,7 +135,9 @@ public interface ApiService {
             this.studentIds = studentIds;
         }
     }
+
     class AddStudentRequest {
+
         public String scheduleId;
         public String studentId;
 

@@ -37,6 +37,7 @@ import vn.edu.usth.classroomschedulemanagementapp.R;
 import vn.edu.usth.classroomschedulemanagementapp.RetrofitClient;
 
 public class AttendanceActivity extends AppCompatActivity {
+
     private static final String TAG = "AttendanceActivity";
     private final List<AttendanceRecord> attendanceList = new ArrayList<>();
     private AttendanceCheckAdapter adapter;
@@ -55,7 +56,6 @@ public class AttendanceActivity extends AppCompatActivity {
         String rawDate = getIntent().getStringExtra("SCHEDULE_DATE");
         Log.d(TAG, "📋 Received SCHEDULE_ID: " + currentScheduleId);
         Log.d(TAG, "📅 Received SCHEDULE_DATE: " + rawDate);
-
 
         // CRITICAL: Validate scheduleId
         if (currentScheduleId == null || currentScheduleId.isEmpty()) {
@@ -84,7 +84,9 @@ public class AttendanceActivity extends AppCompatActivity {
 
     private void formatAndDisplayDate(String rawDate) {
         TextView tvDate = findViewById(R.id.tvAttendanceDate);
-        if (tvDate == null || rawDate == null) return;
+        if (tvDate == null || rawDate == null) {
+            return;
+        }
 
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
@@ -145,7 +147,7 @@ public class AttendanceActivity extends AppCompatActivity {
         RetrofitClient.getService().getAttendanceRecords(currentScheduleId).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<List<ApiService.StudentAttendanceInfo>> call,
-                                   @NonNull Response<List<ApiService.StudentAttendanceInfo>> response) {
+                    @NonNull Response<List<ApiService.StudentAttendanceInfo>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     attendanceList.clear();
                     Log.d(TAG, "✅ Received " + response.body().size() + " attendance records");
@@ -184,7 +186,9 @@ public class AttendanceActivity extends AppCompatActivity {
 
     private void confirmDeleteSelected() {
         int count = adapter.getSelectedCount();
-        if (count == 0) return;
+        if (count == 0) {
+            return;
+        }
 
         new AlertDialog.Builder(this)
                 .setTitle("Delete Students")
@@ -222,8 +226,8 @@ public class AttendanceActivity extends AppCompatActivity {
                     adapter.clearSelections();
 
                     Snackbar.make(findViewById(R.id.rcvAttendanceCheck),
-                                    "Deleted " + positions.size() + " student(s)",
-                                    Snackbar.LENGTH_LONG)
+                            "Deleted " + positions.size() + " student(s)",
+                            Snackbar.LENGTH_LONG)
                             .setAction("UNDO", v -> loadAttendanceData())
                             .show();
 
@@ -246,9 +250,11 @@ public class AttendanceActivity extends AppCompatActivity {
 
     private void saveAttendanceData() {
         Log.d(TAG, "💾 Saving attendance for " + attendanceList.size() + " students");
+        Log.d(TAG, "💾 Schedule ID: " + currentScheduleId);
 
         List<ApiService.AttendanceRecordJson> records = new ArrayList<>();
         for (AttendanceRecord item : attendanceList) {
+            Log.d(TAG, "  📝 Student: " + item.getStudentId() + " → " + item.getStatus());
             records.add(new ApiService.AttendanceRecordJson(item.getStudentId(), item.getStatus()));
         }
 
@@ -261,15 +267,23 @@ public class AttendanceActivity extends AppCompatActivity {
                     Toast.makeText(AttendanceActivity.this, "Attendance saved successfully", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Log.e(TAG, "❌ Save failed: " + response.code());
-                    Toast.makeText(AttendanceActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
+                    String errorMsg = "Save failed: " + response.code();
+                    try {
+                        if (response.errorBody() != null) {
+                            errorMsg += " - " + response.errorBody().string();
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error reading error body");
+                    }
+                    Log.e(TAG, "❌ " + errorMsg);
+                    Toast.makeText(AttendanceActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
                 Log.e(TAG, "❌ Save error: " + t.getMessage());
-                Toast.makeText(AttendanceActivity.this, "Network error", Toast.LENGTH_SHORT).show();
+                Toast.makeText(AttendanceActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -307,7 +321,8 @@ public class AttendanceActivity extends AppCompatActivity {
 
         etName.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -318,7 +333,7 @@ public class AttendanceActivity extends AppCompatActivity {
                     RetrofitClient.getService().searchStudents(searchQuery).enqueue(new Callback<>() {
                         @Override
                         public void onResponse(@NonNull Call<List<ApiService.StudentSearchResponse>> call,
-                                               @NonNull Response<List<ApiService.StudentSearchResponse>> response) {
+                                @NonNull Response<List<ApiService.StudentSearchResponse>> response) {
                             if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
                                 foundStudent[0] = response.body().get(0);
                                 Log.d(TAG, "✅ Found student: " + foundStudent[0].fullName + " (ID: " + foundStudent[0].id + ")");
@@ -338,7 +353,8 @@ public class AttendanceActivity extends AppCompatActivity {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         btnConfirm.setOnClickListener(v -> {

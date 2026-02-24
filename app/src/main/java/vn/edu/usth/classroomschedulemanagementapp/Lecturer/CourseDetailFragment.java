@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +21,9 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -27,13 +31,23 @@ import vn.edu.usth.classroomschedulemanagementapp.ApiService;
 import vn.edu.usth.classroomschedulemanagementapp.R;
 import vn.edu.usth.classroomschedulemanagementapp.RetrofitClient;
 
+// Màn hình 3: Chi tiết lớp học — Danh sách sinh viên + Tài liệu (dùng chung theo môn)
 public class CourseDetailFragment extends Fragment {
 
-    private TextView tvDetailTitle, tvNoDocs;
+    private static final String TAG = "LecturerCourseDetail";
+
+    private TextView tvDetailTitle, tvNoDocs, tvAttTitle;
     private ImageButton btnBack;
     private LinearLayout btnAddDoc;
-    private RecyclerView rcvDocuments, rcvAttendance;
-    private String courseName = "";
+    private RecyclerView rcvDocuments, rcvStudents;
+
+    private StudentListAdapter studentAdapter;
+    private List<StudentInfo> studentList = new ArrayList<>();
+
+    private String classId = "";
+    private String className = "";
+    private String subjectId = "";
+    private String subjectName = "";
 
     @Nullable
     @Override
@@ -45,15 +59,32 @@ public class CourseDetailFragment extends Fragment {
         btnAddDoc = view.findViewById(R.id.btnAddDoc);
         rcvDocuments = view.findViewById(R.id.rcvDocuments);
         tvNoDocs = view.findViewById(R.id.tvNoDocs);
-        rcvAttendance = view.findViewById(R.id.rcvAttendance);
+        tvAttTitle = view.findViewById(R.id.tvAttTitle);
+        rcvStudents = view.findViewById(R.id.rcvAttendance); // Dùng lại RecyclerView attendance cho student list
 
+        // Nhận dữ liệu từ Bundle
         if (getArguments() != null) {
-            courseName = getArguments().getString("COURSE_NAME");
-            tvDetailTitle.setText(courseName);
+            classId = getArguments().getString("CLASS_ID", "");
+            className = getArguments().getString("CLASS_NAME", "");
+            subjectId = getArguments().getString("SUBJECT_ID", "");
+            subjectName = getArguments().getString("SUBJECT_NAME", "");
+
+            // Hỗ trợ cả cách cũ (COURSE_NAME)
+            if (className.isEmpty()) {
+                className = getArguments().getString("COURSE_NAME", "");
+            }
         }
+        tvDetailTitle.setText(className);
+
+        // Đổi tiêu đề "Attendance History" thành "Student List"
+        tvAttTitle.setText("Student List");
 
         rcvDocuments.setLayoutManager(new LinearLayoutManager(getContext()));
-        rcvAttendance.setLayoutManager(new LinearLayoutManager(getContext()));
+        rcvStudents.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        // Setup student adapter
+        studentAdapter = new StudentListAdapter(studentList);
+        rcvStudents.setAdapter(studentAdapter);
 
         btnBack.setOnClickListener(v -> {
             if (getActivity() != null) {
@@ -63,9 +94,40 @@ public class CourseDetailFragment extends Fragment {
 
         btnAddDoc.setOnClickListener(v -> showAddDocumentDialog());
 
+        // Tải danh sách sinh viên
+        if (!classId.isEmpty()) {
+            loadStudents();
+        }
+
         return view;
     }
 
+    // Tải danh sách sinh viên trong lớp
+    private void loadStudents() {
+        Log.d(TAG, "Loading students for class: " + classId);
+
+        RetrofitClient.getService().getClassStudents(classId).enqueue(new Callback<List<StudentInfo>>() {
+            @Override
+            public void onResponse(Call<List<StudentInfo>> call, Response<List<StudentInfo>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    studentList.clear();
+                    studentList.addAll(response.body());
+                    studentAdapter.notifyDataSetChanged();
+                    Log.d(TAG, "Loaded " + studentList.size() + " students");
+                } else {
+                    Log.e(TAG, "Error loading students: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<StudentInfo>> call, Throwable t) {
+                Log.e(TAG, "Network error: " + t.getMessage());
+                Toast.makeText(getContext(), "Error loading students", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // Dialog thêm tài liệu (giữ nguyên logic cũ)
     private void showAddDocumentDialog() {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_add_document, null);
         EditText edtTitle = dialogView.findViewById(R.id.edtDocTitle);
@@ -100,7 +162,9 @@ public class CourseDetailFragment extends Fragment {
         });
     }
 
+    // Upload tài liệu — dùng subjectName làm courseName (chia sẻ theo môn)
     private void handleUploadDocument(String title, String url, AlertDialog dialog) {
+        String courseName = subjectName.isEmpty() ? className : subjectName;
         ApiService.DocumentRequest request = new ApiService.DocumentRequest(courseName, title, url);
 
         RetrofitClient.getService().uploadDocument(request).enqueue(new Callback<Void>() {

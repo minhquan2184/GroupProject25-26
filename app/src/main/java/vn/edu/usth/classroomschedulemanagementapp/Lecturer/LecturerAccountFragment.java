@@ -74,24 +74,32 @@ public class LecturerAccountFragment extends Fragment {
         SharedPreferences prefs = getActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String userId = prefs.getString("USER_ID", "");
 
-        if (userId.isEmpty()) return;
+        if (userId.isEmpty()) {
+            return;
+        }
 
+        // Lấy thông tin profile giảng viên
         RetrofitClient.getService().getProfile(userId).enqueue(new Callback<UserProfile>() {
             @Override
             public void onResponse(Call<UserProfile> call, Response<UserProfile> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     UserProfile profile = response.body();
                     tvName.setText(profile.getFullName());
-                    tvStaffId.setText("Staff ID: " + profile.getStudentCode());
-                    tvDept.setText("Department: " + profile.getMajor());
+                    // staffCode sẽ là profile.id (vd: "lec-02") vì backend trả id khi studentCode null
+                    String staffCode = profile.getStudentCode();
+                    tvStaffId.setText("Staff ID: " + (staffCode != null ? staffCode : userId));
+                    String dept = profile.getMajor();
+                    tvDept.setText("Department: " + (dept != null && !dept.isEmpty() ? dept : "-"));
                 }
             }
+
             @Override
-            public void onFailure(Call<UserProfile> call, Throwable t) {}
+            public void onFailure(Call<UserProfile> call, Throwable t) {
+            }
         });
 
-        // Sử dụng hàm getMyCourses có sẵn trong ApiService
-        RetrofitClient.getService().getMyCourses(userId).enqueue(new Callback<List<Subject>>() {
+        // Lấy danh sách lớp giảng viên đang dạy (KHÔNG PHẢI getMyCourses cho student)
+        RetrofitClient.getService().getLecturerCourses(userId).enqueue(new Callback<List<Subject>>() {
             @Override
             public void onResponse(Call<List<Subject>> call, Response<List<Subject>> response) {
                 if (response.isSuccessful() && response.body() != null) {
@@ -100,6 +108,7 @@ public class LecturerAccountFragment extends Fragment {
                     adapter.notifyDataSetChanged();
                 }
             }
+
             @Override
             public void onFailure(Call<List<Subject>> call, Throwable t) {
                 Toast.makeText(getContext(), "Error loading classes", Toast.LENGTH_SHORT).show();

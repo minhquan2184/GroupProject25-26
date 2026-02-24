@@ -21,15 +21,16 @@ import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import vn.edu.usth.classroomschedulemanagementapp.Calendar.ScheduleResponse;
 import vn.edu.usth.classroomschedulemanagementapp.R;
 import vn.edu.usth.classroomschedulemanagementapp.RetrofitClient;
 
+// Màn hình 1: Danh sách MÔN HỌC giảng viên đang dạy
 public class LecturerDashboardFragment extends Fragment {
-    // SỬA: Bỏ 'private' để tránh lỗi IllegalAccessError khi truy cập từ Callback
+
+    private static final String TAG = "LecturerDashboard";
     RecyclerView recyclerView;
-    LecturerClassAdapter adapter;
-    List<ClassModel> dataList = new ArrayList<>();
+    LecturerSubjectAdapter adapter;
+    List<LecturerSubject> subjectList = new ArrayList<>();
 
     @Nullable
     @Override
@@ -39,16 +40,27 @@ public class LecturerDashboardFragment extends Fragment {
         recyclerView = view.findViewById(R.id.recyclerItems);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        adapter = new LecturerClassAdapter(dataList);
+        // Khi click vào môn học → chuyển sang danh sách lớp
+        adapter = new LecturerSubjectAdapter(subjectList, subject -> {
+            LecturerClassListFragment fragment = new LecturerClassListFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString("SUBJECT_ID", subject.getId());
+            bundle.putString("SUBJECT_NAME", subject.getName());
+            fragment.setArguments(bundle);
+
+            getActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .addToBackStack(null)
+                    .commit();
+        });
         recyclerView.setAdapter(adapter);
 
-        loadDataFromApi();
+        loadSubjects();
 
         return view;
     }
 
-    private void loadDataFromApi() {
-        // SỬA: Lấy ID linh hoạt từ SharedPreferences giống phần Student
+    private void loadSubjects() {
         SharedPreferences prefs = getActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String userId = prefs.getString("USER_ID", "");
 
@@ -57,31 +69,25 @@ public class LecturerDashboardFragment extends Fragment {
             return;
         }
 
-        RetrofitClient.getService().getStudentSchedule(userId).enqueue(new Callback<List<ScheduleResponse>>() {
-            @Override
-            public void onResponse(Call<List<ScheduleResponse>> call, Response<List<ScheduleResponse>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    dataList.clear();
-                    for (ScheduleResponse item : response.body()) {
-                        // SỬA: Gán item.getSubjectName() vào constructor để hiển thị tên môn học
-                        ClassModel model = new ClassModel("id", item.getSubjectName(), "Major");
-                        model.setRoomName(item.getRoomName());
-                        model.setStartTime(item.getStartTime());
-                        model.setEndTime(item.getEndTime());
+        Log.d(TAG, "Loading subjects for lecturer: " + userId);
 
-                        dataList.add(model);
-                    }
+        RetrofitClient.getService().getLecturerSubjects(userId).enqueue(new Callback<List<LecturerSubject>>() {
+            @Override
+            public void onResponse(Call<List<LecturerSubject>> call, Response<List<LecturerSubject>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    subjectList.clear();
+                    subjectList.addAll(response.body());
                     adapter.notifyDataSetChanged();
-                    Log.d("API_SUCCESS", "Tải thành công: " + dataList.size() + " lớp.");
+                    Log.d(TAG, "Loaded " + subjectList.size() + " subjects");
                 } else {
-                    Log.e("API_ERROR", "Mã lỗi: " + response.code());
-                    Toast.makeText(getContext(), "Không tìm thấy dữ liệu cho ID: " + userId, Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error: " + response.code());
+                    Toast.makeText(getContext(), "Không tìm thấy môn học", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
-            public void onFailure(Call<List<ScheduleResponse>> call, Throwable t) {
-                Log.e("API_ERROR", "Lỗi kết nối: " + t.getMessage());
+            public void onFailure(Call<List<LecturerSubject>> call, Throwable t) {
+                Log.e(TAG, "Network error: " + t.getMessage());
                 Toast.makeText(getContext(), "Lỗi kết nối server!", Toast.LENGTH_SHORT).show();
             }
         });
