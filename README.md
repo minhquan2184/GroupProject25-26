@@ -2,19 +2,19 @@
 
 A comprehensive Android application designed for **University of Science and Technology of Hanoi (USTH)** students and lecturers to manage academic schedules, course enrollments, and attendance efficiently.
 
-## 📱 Project Overview
+##  Project Overview
 
 This is a native Android application built with **Java**. It follows a Client-Server architecture where the Android app acts as the client, communicating with a Node.js backend via RESTful APIs. The app features a role-based authentication system separating **Students** and **Lecturers** functionalities.
 
-## ✨ Key Features
+##  Key Features
 
-### 🎓 For Students
+###  For Students
 * **Smart Calendar:** View weekly/monthly class schedules with visual indicators for upcoming classes.
 * **Course Enrollment:** Browse available subjects and self-enroll in classes. The app handles "Enrolled" status logic to prevent duplicate registrations.
 * **My Courses:** View list of enrolled courses and access detailed information like attendance history.
 * **Academic Results:** View grades, student ID, and major information.
 
-### 👨‍🏫 For Lecturers
+### ‍ For Lecturers
 * **Teaching Schedule:** View assigned classes and room locations on the calendar.
 * **Class Dashboard:** Manage specific class details (Room, Time, Documents).
 
@@ -37,6 +37,6 @@ The project utilizes modern Android development standards and libraries:
 
 ---
 
-## 📂 Project Architecture
+##  Project Architecture
 
 The codebase is organized by **Features** to ensure scalability and maintainability:

@@ -54,19 +54,19 @@ public class AttendanceActivity extends AppCompatActivity {
         // Get intent data with validation
         currentScheduleId = getIntent().getStringExtra("SCHEDULE_ID");
         String rawDate = getIntent().getStringExtra("SCHEDULE_DATE");
-        Log.d(TAG, "📋 Received SCHEDULE_ID: " + currentScheduleId);
-        Log.d(TAG, "📅 Received SCHEDULE_DATE: " + rawDate);
+        Log.d(TAG, " Received SCHEDULE_ID: " + currentScheduleId);
+        Log.d(TAG, " Received SCHEDULE_DATE: " + rawDate);
 
         // CRITICAL: Validate scheduleId
         if (currentScheduleId == null || currentScheduleId.isEmpty()) {
-            Log.e(TAG, "❌ CRITICAL ERROR: SCHEDULE_ID is null or empty!");
+            Log.e(TAG, " CRITICAL ERROR: SCHEDULE_ID is null or empty!");
             Toast.makeText(this, "Error: Missing schedule ID", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
-        Log.d(TAG, "📋 Initialized with Schedule ID: " + currentScheduleId);
-        Log.d(TAG, "📅 Schedule Date: " + rawDate);
+        Log.d(TAG, " Initialized with Schedule ID: " + currentScheduleId);
+        Log.d(TAG, " Schedule Date: " + rawDate);
 
         formatAndDisplayDate(rawDate);
         setupToolbar();
@@ -142,7 +142,7 @@ public class AttendanceActivity extends AppCompatActivity {
     }
 
     private void loadAttendanceData() {
-        Log.d(TAG, "🔄 Loading attendance for schedule: " + currentScheduleId);
+        Log.d(TAG, " Loading attendance for schedule: " + currentScheduleId);
 
         RetrofitClient.getService().getAttendanceRecords(currentScheduleId).enqueue(new Callback<>() {
             @Override
@@ -150,7 +150,7 @@ public class AttendanceActivity extends AppCompatActivity {
                     @NonNull Response<List<ApiService.StudentAttendanceInfo>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     attendanceList.clear();
-                    Log.d(TAG, "✅ Received " + response.body().size() + " attendance records");
+                    Log.d(TAG, " Received " + response.body().size() + " attendance records");
 
                     for (ApiService.StudentAttendanceInfo info : response.body()) {
                         Log.d(TAG, String.format("Student: %s, ID: %s, Code: %s, Status: %s",
@@ -167,9 +167,9 @@ public class AttendanceActivity extends AppCompatActivity {
                         ));
                     }
                     adapter.notifyDataSetChanged();
-                    Log.d(TAG, "✅ Adapter updated with " + attendanceList.size() + " records");
+                    Log.d(TAG, " Adapter updated with " + attendanceList.size() + " records");
                 } else {
-                    Log.e(TAG, "❌ Response failed: " + response.code());
+                    Log.e(TAG, " Response failed: " + response.code());
                     Toast.makeText(AttendanceActivity.this,
                             "Failed to load attendance: " + response.code(),
                             Toast.LENGTH_SHORT).show();
@@ -178,7 +178,7 @@ public class AttendanceActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(@NonNull Call<List<ApiService.StudentAttendanceInfo>> call, @NonNull Throwable t) {
-                Log.e(TAG, "❌ Network Error: " + t.getMessage());
+                Log.e(TAG, " Network Error: " + t.getMessage());
                 Toast.makeText(AttendanceActivity.this, "Network Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -210,7 +210,7 @@ public class AttendanceActivity extends AppCompatActivity {
                 .map(AttendanceRecord::getStudentId)
                 .collect(Collectors.toList());
 
-        Log.d(TAG, "🗑️ Deleting students: " + studentIds);
+        Log.d(TAG, "️ Deleting students: " + studentIds);
 
         ApiService.DeleteRequest request = new ApiService.DeleteRequest(currentScheduleId, studentIds);
 
@@ -231,16 +231,16 @@ public class AttendanceActivity extends AppCompatActivity {
                             .setAction("UNDO", v -> loadAttendanceData())
                             .show();
 
-                    Log.d(TAG, "✅ Deleted " + positions.size() + " students");
+                    Log.d(TAG, " Deleted " + positions.size() + " students");
                 } else {
-                    Log.e(TAG, "❌ Delete failed: " + response.code());
+                    Log.e(TAG, " Delete failed: " + response.code());
                     Toast.makeText(AttendanceActivity.this, "Delete failed", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
-                Log.e(TAG, "❌ Delete error: " + t.getMessage());
+                Log.e(TAG, " Delete error: " + t.getMessage());
                 Toast.makeText(AttendanceActivity.this,
                         "Network error: " + t.getMessage(),
                         Toast.LENGTH_SHORT).show();
@@ -249,12 +249,12 @@ public class AttendanceActivity extends AppCompatActivity {
     }
 
     private void saveAttendanceData() {
-        Log.d(TAG, "💾 Saving attendance for " + attendanceList.size() + " students");
-        Log.d(TAG, "💾 Schedule ID: " + currentScheduleId);
+        Log.d(TAG, " Saving attendance for " + attendanceList.size() + " students");
+        Log.d(TAG, " Schedule ID: " + currentScheduleId);
 
         List<ApiService.AttendanceRecordJson> records = new ArrayList<>();
         for (AttendanceRecord item : attendanceList) {
-            Log.d(TAG, "  📝 Student: " + item.getStudentId() + " → " + item.getStatus());
+            Log.d(TAG, "   Student: " + item.getStudentId() + " → " + item.getStatus());
             records.add(new ApiService.AttendanceRecordJson(item.getStudentId(), item.getStatus()));
         }
 
@@ -263,7 +263,7 @@ public class AttendanceActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
                 if (response.isSuccessful()) {
-                    Log.d(TAG, "✅ Attendance saved successfully");
+                    Log.d(TAG, " Attendance saved successfully");
                     Toast.makeText(AttendanceActivity.this, "Attendance saved successfully", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
@@ -275,14 +275,14 @@ public class AttendanceActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         Log.e(TAG, "Error reading error body");
                     }
-                    Log.e(TAG, "❌ " + errorMsg);
+                    Log.e(TAG, " " + errorMsg);
                     Toast.makeText(AttendanceActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
-                Log.e(TAG, "❌ Save error: " + t.getMessage());
+                Log.e(TAG, " Save error: " + t.getMessage());
                 Toast.makeText(AttendanceActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
@@ -305,11 +305,11 @@ public class AttendanceActivity extends AppCompatActivity {
         // CRITICAL: Check scheduleId before showing dialog
         if (currentScheduleId == null || currentScheduleId.isEmpty()) {
             Toast.makeText(this, "Error: Invalid schedule ID", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "❌ Cannot add student: scheduleId is null/empty");
+            Log.e(TAG, " Cannot add student: scheduleId is null/empty");
             return;
         }
 
-        Log.d(TAG, "📝 Opening add student dialog for schedule: " + currentScheduleId);
+        Log.d(TAG, " Opening add student dialog for schedule: " + currentScheduleId);
 
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = getLayoutInflater().inflate(R.layout.layout_add_student_bottom_sheet, null);
@@ -328,7 +328,7 @@ public class AttendanceActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (s.length() >= 2) {
                     String searchQuery = s.toString().trim();
-                    Log.d(TAG, "🔍 Searching for: " + searchQuery);
+                    Log.d(TAG, " Searching for: " + searchQuery);
 
                     RetrofitClient.getService().searchStudents(searchQuery).enqueue(new Callback<>() {
                         @Override
@@ -336,17 +336,17 @@ public class AttendanceActivity extends AppCompatActivity {
                                 @NonNull Response<List<ApiService.StudentSearchResponse>> response) {
                             if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
                                 foundStudent[0] = response.body().get(0);
-                                Log.d(TAG, "✅ Found student: " + foundStudent[0].fullName + " (ID: " + foundStudent[0].id + ")");
+                                Log.d(TAG, " Found student: " + foundStudent[0].fullName + " (ID: " + foundStudent[0].id + ")");
                                 etName.setError("Found: " + foundStudent[0].studentCode);
                             } else {
                                 foundStudent[0] = null;
-                                Log.d(TAG, "⚠️ No students found");
+                                Log.d(TAG, "️ No students found");
                             }
                         }
 
                         @Override
                         public void onFailure(@NonNull Call<List<ApiService.StudentSearchResponse>> call, @NonNull Throwable t) {
-                            Log.e(TAG, "❌ Search failed: " + t.getMessage());
+                            Log.e(TAG, " Search failed: " + t.getMessage());
                         }
                     });
                 }
@@ -366,11 +366,11 @@ public class AttendanceActivity extends AppCompatActivity {
             // CRITICAL: Double-check scheduleId before making request
             if (currentScheduleId == null || currentScheduleId.isEmpty()) {
                 Toast.makeText(this, "Error: Invalid schedule ID", Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "❌ CRITICAL: scheduleId is null when adding student!");
+                Log.e(TAG, " CRITICAL: scheduleId is null when adding student!");
                 return;
             }
 
-            Log.d(TAG, "➕ Adding student " + foundStudent[0].id + " to schedule " + currentScheduleId);
+            Log.d(TAG, " Adding student " + foundStudent[0].id + " to schedule " + currentScheduleId);
 
             ApiService.AddStudentRequest req = new ApiService.AddStudentRequest(
                     currentScheduleId,
@@ -383,7 +383,7 @@ public class AttendanceActivity extends AppCompatActivity {
                         @Override
                         public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
                             if (response.isSuccessful()) {
-                                Log.d(TAG, "✅ Student added successfully");
+                                Log.d(TAG, " Student added successfully");
                                 loadAttendanceData();
                                 dialog.dismiss();
                                 Toast.makeText(
@@ -392,7 +392,7 @@ public class AttendanceActivity extends AppCompatActivity {
                                         Toast.LENGTH_SHORT
                                 ).show();
                             } else {
-                                Log.e(TAG, "❌ Add student failed: " + response.code());
+                                Log.e(TAG, " Add student failed: " + response.code());
                                 String errorMsg = "Add student failed";
                                 try {
                                     if (response.errorBody() != null) {
@@ -411,7 +411,7 @@ public class AttendanceActivity extends AppCompatActivity {
 
                         @Override
                         public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
-                            Log.e(TAG, "❌ Network error: " + t.getMessage());
+                            Log.e(TAG, " Network error: " + t.getMessage());
                             Toast.makeText(
                                     AttendanceActivity.this,
                                     "Network error: " + t.getMessage(),

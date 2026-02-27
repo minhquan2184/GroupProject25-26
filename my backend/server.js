@@ -4,7 +4,6 @@ const { Client } = require('pg');
 const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 
 app.use(cors());
@@ -440,33 +439,18 @@ app.post('/api/document', async (req, res) => {
     res.status(500).json({ message: "Lỗi tương thích bảng: " + err.message });
   }
 });
-// ==========================================
-//      FIXED ATTENDANCE MANAGEMENT API
-// ==========================================
 
 // Student Attendance History - XEM LỊCH SỬ ĐIỂM DANH CỦA TỪNG SINH VIÊN
-// ⚠️ PHẢI đặt TRƯỚC route /api/attendance/:scheduleId để Express route đúng
+// ️Đặt trc route /api/attendance/:scheduleId !!!!!
 app.get('/api/attendance', async (req, res) => {
   const { classId, studentId } = req.query;
-  console.log(`📋 Fetching attendance history for student "${studentId}" in class "${classId}"`);
+  console.log(` Fetching attendance history for student "${studentId}" in class "${classId}"`);
 
   if (!classId || !studentId) {
     return res.status(400).json({ message: "Missing classId or studentId" });
   }
 
   try {
-    // Debug: Kiểm tra có schedule nào thuộc class này không
-    const debugSchedules = await client.query(
-      'SELECT id, "classId" FROM class_schedule WHERE "classId" = $1', [classId]
-    );
-    console.log(`🔍 Found ${debugSchedules.rows.length} schedules for class "${classId}"`);
-
-    // Debug: Kiểm tra có attendance nào cho student này không
-    const debugAttendance = await client.query(
-      'SELECT schedule_id, student_id, status FROM attendances WHERE student_id = $1', [studentId]
-    );
-    console.log(`🔍 Found ${debugAttendance.rows.length} total attendance records for student "${studentId}"`);
-
     const query = `
       SELECT 
         a.status,
@@ -480,7 +464,7 @@ app.get('/api/attendance', async (req, res) => {
       ORDER BY cs."startTime" ASC
     `;
     const result = await client.query(query, [classId, studentId]);
-    console.log(`✅ Final result: ${result.rows.length} attendance records for student "${studentId}" in class "${classId}"`);
+    console.log(` Final result: ${result.rows.length} attendance records for student "${studentId}" in class "${classId}"`);
     res.json(result.rows);
   } catch (err) {
     console.error("Get Student Attendance Error:", err);
@@ -491,7 +475,7 @@ app.get('/api/attendance', async (req, res) => {
 // Submit Attendance - LƯU ĐÚNG NGÀY HỌC
 app.post('/api/attendance/submit', async (req, res) => {
   const { scheduleId, records } = req.body;
-  console.log(`💾 Saving attendance for schedule: ${scheduleId}, Records: ${records.length}`);
+  console.log(` Saving attendance for schedule: ${scheduleId}, Records: ${records.length}`);
 
   if (!scheduleId || !records || !Array.isArray(records)) {
     return res.status(400).json({ message: "Invalid request data" });
@@ -500,7 +484,7 @@ app.post('/api/attendance/submit', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // ✅ BƯỚC 1: Lấy startTime từ class_schedule
+    //  BƯỚC 1: Lấy startTime từ class_schedule
     const scheduleQuery = `
       SELECT "startTime" 
       FROM class_schedule 
@@ -510,17 +494,17 @@ app.post('/api/attendance/submit', async (req, res) => {
 
     if (scheduleResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      console.error(`❌ Schedule ${scheduleId} not found`);
+      console.error(` Schedule ${scheduleId} not found`);
       return res.status(404).json({ message: "Schedule not found" });
     }
 
     const scheduleStartTime = scheduleResult.rows[0].startTime;
-    console.log(`📅 Schedule date: ${scheduleStartTime}`);
+    console.log(` Schedule date: ${scheduleStartTime}`);
 
-    // ✅ BƯỚC 2: Insert/Update với ĐÚNG NGÀY HỌC
+    //  BƯỚC 2: Insert/Update với ĐÚNG NGÀY HỌC
     for (const record of records) {
       if (!record.studentId || !record.status) {
-        console.warn('⚠️ Skipping invalid record:', record);
+        console.warn('️ Skipping invalid record:', record);
         continue;
       }
 
@@ -533,18 +517,18 @@ app.post('/api/attendance/submit', async (req, res) => {
           check_in_time = EXCLUDED.check_in_time
       `;
 
-      // ✅ SỬ DỤNG scheduleStartTime (ngày học) thay vì CURRENT_TIMESTAMP
+      //  SỬ DỤNG scheduleStartTime (ngày học) thay vì CURRENT_TIMESTAMP
       const values = [scheduleId, record.studentId, record.status, scheduleStartTime];
       await client.query(query, values);
     }
 
     await client.query('COMMIT');
-    console.log(`✅ Saved ${records.length} records with date: ${scheduleStartTime}`);
+    console.log(` Saved ${records.length} records with date: ${scheduleStartTime}`);
     res.json({ message: "Attendance saved successfully!" });
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error("❌ Save attendance error:", err.message);
+    console.error(" Save attendance error:", err.message);
     res.status(500).json({ message: "Database error: " + err.message });
   }
 });
@@ -552,14 +536,14 @@ app.post('/api/attendance/submit', async (req, res) => {
 // Add Student to Attendance - LƯU ĐÚNG NGÀY HỌC
 app.post('/api/attendance/add-student', async (req, res) => {
   const { scheduleId, studentId } = req.body;
-  console.log(`➕ Adding student ${studentId} to schedule ${scheduleId}`);
+  console.log(` Adding student ${studentId} to schedule ${scheduleId}`);
 
   if (!scheduleId || !studentId) {
     return res.status(400).json({ message: "Missing scheduleId or studentId" });
   }
 
   try {
-    // ✅ BƯỚC 1: Lấy startTime từ class_schedule
+    //  BƯỚC 1: Lấy startTime từ class_schedule
     const scheduleQuery = `
       SELECT "startTime" 
       FROM class_schedule 
@@ -568,19 +552,19 @@ app.post('/api/attendance/add-student', async (req, res) => {
     const scheduleResult = await client.query(scheduleQuery, [scheduleId]);
 
     if (scheduleResult.rows.length === 0) {
-      console.error(`❌ Schedule ${scheduleId} not found`);
+      console.error(` Schedule ${scheduleId} not found`);
       return res.status(404).json({ message: "Schedule not found" });
     }
 
     const scheduleStartTime = scheduleResult.rows[0].startTime;
-    console.log(`📅 Using schedule date: ${scheduleStartTime}`);
+    console.log(` Using schedule date: ${scheduleStartTime}`);
 
     // Check if student exists
     const studentCheck = `SELECT id, "fullName" FROM user_profile WHERE id = $1`;
     const studentResult = await client.query(studentCheck, [studentId]);
 
     if (studentResult.rows.length === 0) {
-      console.error(`❌ Student ${studentId} not found`);
+      console.error(` Student ${studentId} not found`);
       return res.status(404).json({ message: "Student not found" });
     }
 
@@ -592,11 +576,11 @@ app.post('/api/attendance/add-student', async (req, res) => {
     const checkResult = await client.query(checkQuery, [scheduleId, studentId]);
 
     if (checkResult.rows.length > 0) {
-      console.warn(`⚠️ Student already in attendance`);
+      console.warn(`️ Student already in attendance`);
       return res.status(400).json({ message: "Student already in attendance list" });
     }
 
-    // ✅ Insert với ĐÚNG NGÀY HỌC
+    //  Insert với ĐÚNG NGÀY HỌC
     const insertQuery = `
       INSERT INTO attendances (id, schedule_id, student_id, status, check_in_time)
       VALUES (gen_random_uuid(), $1, $2, 'Present', $3)
@@ -604,24 +588,24 @@ app.post('/api/attendance/add-student', async (req, res) => {
     `;
     const result = await client.query(insertQuery, [scheduleId, studentId, scheduleStartTime]);
 
-    console.log(`✅ Added student with date: ${scheduleStartTime}`);
+    console.log(` Added student with date: ${scheduleStartTime}`);
     res.json({
       message: "Student added successfully",
       attendanceId: result.rows[0].id
     });
 
   } catch (err) {
-    console.error("❌ Add student error:", err.message);
+    console.error(" Add student error:", err.message);
     res.status(500).json({ message: "Database error: " + err.message });
   }
 });
 // Get Attendance Records - TỰ ĐỘNG TẠO từ enrollment nếu chưa có
 app.get('/api/attendance/:scheduleId', async (req, res) => {
   const { scheduleId } = req.params;
-  console.log(`📋 Fetching attendance for schedule: ${scheduleId}`);
+  console.log(` Fetching attendance for schedule: ${scheduleId}`);
 
   try {
-    // ✅ BƯỚC 1: Kiểm tra schedule tồn tại và lấy thông tin
+    //  BƯỚC 1: Kiểm tra schedule tồn tại và lấy thông tin
     const scheduleCheck = `
       SELECT cs.id, cs."classId", cs."startTime"
       FROM class_schedule cs
@@ -630,15 +614,15 @@ app.get('/api/attendance/:scheduleId', async (req, res) => {
     const scheduleResult = await client.query(scheduleCheck, [scheduleId]);
 
     if (scheduleResult.rows.length === 0) {
-      console.error(`❌ Schedule ${scheduleId} not found in class_schedule`);
+      console.error(` Schedule ${scheduleId} not found in class_schedule`);
       return res.status(404).json({ message: "Schedule not found" });
     }
 
     const classId = scheduleResult.rows[0].classId;
     const startTime = scheduleResult.rows[0].startTime;
-    console.log(`📚 Class ID: ${classId}, Start Time: ${startTime}`);
+    console.log(` Class ID: ${classId}, Start Time: ${startTime}`);
 
-    // ✅ BƯỚC 2: Lấy attendance records hiện có
+    //  BƯỚC 2: Lấy attendance records hiện có
     const attendanceQuery = `
       SELECT 
         a.id as "attendanceId",
@@ -653,14 +637,14 @@ app.get('/api/attendance/:scheduleId', async (req, res) => {
     `;
     const attendanceResult = await client.query(attendanceQuery, [scheduleId]);
 
-    // ✅ BƯỚC 3: Nếu đã có records, trả về luôn
+    //  BƯỚC 3: Nếu đã có records, trả về luôn
     if (attendanceResult.rows.length > 0) {
-      console.log(`✅ Found ${attendanceResult.rows.length} existing attendance records`);
+      console.log(` Found ${attendanceResult.rows.length} existing attendance records`);
       return res.json(attendanceResult.rows);
     }
 
-    // ✅ BƯỚC 4: Nếu CHƯA có, tự động tạo từ enrollment
-    console.log(`📝 No attendance records found, auto-creating from enrollment...`);
+    //  BƯỚC 4: Nếu CHƯA có, tự động tạo từ enrollment
+    console.log(` No attendance records found, auto-creating from enrollment...`);
 
     const enrollmentQuery = `
       SELECT 
@@ -675,11 +659,11 @@ app.get('/api/attendance/:scheduleId', async (req, res) => {
     const enrollmentResult = await client.query(enrollmentQuery, [classId]);
 
     if (enrollmentResult.rows.length === 0) {
-      console.log(`⚠️ No students enrolled in this class yet`);
+      console.log(`️ No students enrolled in this class yet`);
       return res.json([]); // Trả về mảng rỗng
     }
 
-    // ✅ BƯỚC 5: Tạo attendance records cho tất cả sinh viên đã đăng ký
+    //  BƯỚC 5: Tạo attendance records cho tất cả sinh viên đã đăng ký
     await client.query('BEGIN');
 
     for (const student of enrollmentResult.rows) {
@@ -692,16 +676,16 @@ app.get('/api/attendance/:scheduleId', async (req, res) => {
     }
 
     await client.query('COMMIT');
-    console.log(`✅ Auto-created ${enrollmentResult.rows.length} attendance records`);
+    console.log(` Auto-created ${enrollmentResult.rows.length} attendance records`);
 
-    // ✅ BƯỚC 6: Lấy lại data vừa tạo để trả về
+    //  BƯỚC 6: Lấy lại data vừa tạo để trả về
     const newRecordsResult = await client.query(attendanceQuery, [scheduleId]);
-    console.log(`📤 Returning ${newRecordsResult.rows.length} records to app`);
+    console.log(` Returning ${newRecordsResult.rows.length} records to app`);
     res.json(newRecordsResult.rows);
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error("❌ Get attendance error:", err.message);
+    console.error(" Get attendance error:", err.message);
     console.error("Full error:", err);
     res.status(500).json({ message: "Error fetching attendance: " + err.message });
   }
@@ -710,7 +694,7 @@ app.get('/api/attendance/:scheduleId', async (req, res) => {
 // Remove Students from Attendance (GIỮ NGUYÊN)
 app.post('/api/attendance/remove-students', async (req, res) => {
   const { scheduleId, studentIds } = req.body;
-  console.log(`🗑️ Removing ${studentIds?.length || 0} students from schedule ${scheduleId}`);
+  console.log(`️ Removing ${studentIds?.length || 0} students from schedule ${scheduleId}`);
 
   if (!scheduleId || !studentIds || !Array.isArray(studentIds)) {
     return res.status(400).json({ message: "Invalid request data" });
@@ -732,7 +716,7 @@ app.post('/api/attendance/remove-students', async (req, res) => {
 
     await client.query('COMMIT');
 
-    console.log(`✅ Successfully removed ${result.rowCount} attendance records`);
+    console.log(` Successfully removed ${result.rowCount} attendance records`);
     res.json({
       message: "Students removed successfully",
       deletedCount: result.rowCount
@@ -740,7 +724,7 @@ app.post('/api/attendance/remove-students', async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error("❌ Delete attendance error:", err.message);
+    console.error(" Delete attendance error:", err.message);
     res.status(500).json({ message: "Database error: " + err.message });
   }
 });
@@ -749,7 +733,7 @@ app.post('/api/attendance/remove-students', async (req, res) => {
 // Search Students (GIỮ NGUYÊN)
 app.get('/api/students/search', async (req, res) => {
   const { name } = req.query;
-  console.log(`🔍 Searching for students: "${name}"`);
+  console.log(` Searching for students: "${name}"`);
 
   if (!name || name.trim().length < 2) {
     return res.json([]);
@@ -764,10 +748,10 @@ app.get('/api/students/search', async (req, res) => {
       LIMIT 10
     `;
     const result = await client.query(query, [`%${name}%`]);
-    console.log(`✅ Found ${result.rows.length} students`);
+    console.log(` Found ${result.rows.length} students`);
     res.json(result.rows);
   } catch (err) {
-    console.error("❌ Search Error:", err);
+    console.error(" Search Error:", err);
     res.status(500).json({ message: err.message });
   }
 });
