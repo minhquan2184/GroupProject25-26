@@ -97,9 +97,13 @@ public class StudentMainActivity extends AppCompatActivity implements Navigation
 
         // Lấy tên tạm từ SharedPreferences (hiển thị trước khi API tải xong)
         String savedName = prefs.getString("FULL_NAME", "Student");
-        if (tvName != null) tvName.setText(savedName);
+        if (tvName != null) {
+            tvName.setText(savedName);
+        }
 
-        if (userId.isEmpty()) return;
+        if (userId.isEmpty()) {
+            return;
+        }
 
         // Gọi API lấy Profile (để có Major và StudentCode chính xác)
         RetrofitClient.getService().getProfile(userId).enqueue(new Callback<UserProfile>() {
@@ -109,9 +113,15 @@ public class StudentMainActivity extends AppCompatActivity implements Navigation
                     UserProfile user = response.body();
 
                     // Cập nhật giao diện với dữ liệu thật từ Server
-                    if (tvName != null) tvName.setText(user.getFullName());
-                    if (tvId != null) tvId.setText("ID: " + user.getStudentCode());
-                    if (tvMajor != null) tvMajor.setText("Major: " + user.getMajor());
+                    if (tvName != null) {
+                        tvName.setText(user.getFullName());
+                    }
+                    if (tvId != null) {
+                        tvId.setText("ID: " + user.getStudentCode());
+                    }
+                    if (tvMajor != null) {
+                        tvMajor.setText("Major: " + user.getMajor());
+                    }
                 }
             }
 

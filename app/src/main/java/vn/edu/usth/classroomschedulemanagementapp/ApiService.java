@@ -73,14 +73,29 @@ public interface ApiService {
     @POST("/api/document")
     Call<Void> uploadDocument(@Body DocumentRequest request);
 
+    @GET("/api/documents/{classId}")
+    Call<List<DocumentResponse>> getDocuments(@Path("classId") String classId);
+
+    class DocumentResponse {
+
+        public String id;
+        public String title;
+        public String description; // URL is stored in description
+        public String createdat;
+    }
+
     class DocumentRequest {
 
-        String courseName;
+        String classId;
+        String uploaderId;
+        String subjectId;
         String title;
         String url;
 
-        public DocumentRequest(String courseName, String title, String url) {
-            this.courseName = courseName;
+        public DocumentRequest(String classId, String uploaderId, String subjectId, String title, String url) {
+            this.classId = classId;
+            this.uploaderId = uploaderId;
+            this.subjectId = subjectId;
             this.title = title;
             this.url = url;
         }

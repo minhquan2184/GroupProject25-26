@@ -34,7 +34,8 @@ public class AllCoursesFragment extends Fragment {
     private List<Subject> subjectList;
     private String userId;
 
-    public AllCoursesFragment() {}
+    public AllCoursesFragment() {
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -60,7 +61,9 @@ public class AllCoursesFragment extends Fragment {
 
     // === QUAN TRỌNG: LOGIC KHÓA NÚT Ở ĐÂY ===
     private void showCourseDetailBottomSheet(Subject subject, int position) {
-        if (getContext() == null) return;
+        if (getContext() == null) {
+            return;
+        }
 
         BottomSheetDialog dialog = new BottomSheetDialog(getContext());
         View sheetView = LayoutInflater.from(getContext()).inflate(R.layout.student_all_course_detail, null);
@@ -145,7 +148,9 @@ public class AllCoursesFragment extends Fragment {
     }
 
     private void fetchSubjects() {
-        if (userId.isEmpty()) return;
+        if (userId.isEmpty()) {
+            return;
+        }
         RetrofitClient.getService().getSubjects(userId).enqueue(new Callback<List<Subject>>() {
             @Override
             public void onResponse(Call<List<Subject>> call, Response<List<Subject>> response) {
@@ -155,6 +160,7 @@ public class AllCoursesFragment extends Fragment {
                     adapter.notifyDataSetChanged();
                 }
             }
+
             @Override
             public void onFailure(Call<List<Subject>> call, Throwable t) {
                 Log.e("AllCourses", "Error: " + t.getMessage());

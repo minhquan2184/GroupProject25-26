@@ -19,6 +19,7 @@ public class AllCourseAdapter extends RecyclerView.Adapter<AllCourseAdapter.Cour
     private OnItemClickListener listener;
 
     public interface OnItemClickListener {
+
         void onItemClick(Subject subject, int position);
     }
 
@@ -67,6 +68,7 @@ public class AllCourseAdapter extends RecyclerView.Adapter<AllCourseAdapter.Cour
     }
 
     public static class CourseViewHolder extends RecyclerView.ViewHolder {
+
         TextView tvCourseName, tvProfessor, tvCredits;
         Button btnAction;
 

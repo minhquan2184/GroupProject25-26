@@ -2,6 +2,8 @@ package vn.edu.usth.classroomschedulemanagementapp.Lecturer;
 
 import android.app.AlertDialog;
 import android.graphics.Color;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.util.Log;
@@ -43,6 +45,9 @@ public class CourseDetailFragment extends Fragment {
 
     private StudentListAdapter studentAdapter;
     private List<StudentInfo> studentList = new ArrayList<>();
+
+    private vn.edu.usth.classroomschedulemanagementapp.DocumentAdapter documentAdapter;
+    private List<ApiService.DocumentResponse> documentList = new ArrayList<>();
 
     private String classId = "";
     private String className = "";
@@ -86,6 +91,11 @@ public class CourseDetailFragment extends Fragment {
         studentAdapter = new StudentListAdapter(studentList);
         rcvStudents.setAdapter(studentAdapter);
 
+        // Setup document adapter
+        rcvDocuments.setLayoutManager(new LinearLayoutManager(getContext()));
+        documentAdapter = new vn.edu.usth.classroomschedulemanagementapp.DocumentAdapter(getContext(), documentList);
+        rcvDocuments.setAdapter(documentAdapter);
+
         btnBack.setOnClickListener(v -> {
             if (getActivity() != null) {
                 getActivity().getSupportFragmentManager().popBackStack();
@@ -97,6 +107,7 @@ public class CourseDetailFragment extends Fragment {
         // Tải danh sách sinh viên
         if (!classId.isEmpty()) {
             loadStudents();
+            loadDocuments();
         }
 
         return view;
@@ -162,10 +173,50 @@ public class CourseDetailFragment extends Fragment {
         });
     }
 
-    // Upload tài liệu — dùng subjectName làm courseName (chia sẻ theo môn)
+    private void loadDocuments() {
+        RetrofitClient.getService().getDocuments(classId).enqueue(new Callback<List<ApiService.DocumentResponse>>() {
+            @Override
+            public void onResponse(Call<List<ApiService.DocumentResponse>> call, Response<List<ApiService.DocumentResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    documentList.clear();
+                    documentList.addAll(response.body());
+                    documentAdapter.notifyDataSetChanged();
+
+                    if (documentList.isEmpty()) {
+                        tvNoDocs.setVisibility(View.VISIBLE);
+                        rcvDocuments.setVisibility(View.GONE);
+                    } else {
+                        tvNoDocs.setVisibility(View.GONE);
+                        rcvDocuments.setVisibility(View.VISIBLE);
+                    }
+                } else {
+                    Log.e(TAG, "Error fetching documents");
+                    tvNoDocs.setVisibility(View.VISIBLE);
+                    rcvDocuments.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<ApiService.DocumentResponse>> call, Throwable t) {
+                Log.e(TAG, "Network error: " + t.getMessage());
+                tvNoDocs.setVisibility(View.VISIBLE);
+                rcvDocuments.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    // Upload tài liệu
     private void handleUploadDocument(String title, String url, AlertDialog dialog) {
-        String courseName = subjectName.isEmpty() ? className : subjectName;
-        ApiService.DocumentRequest request = new ApiService.DocumentRequest(courseName, title, url);
+        // Lấy uploaderId từ SharedPreferences
+        SharedPreferences prefs = requireContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+        String uploaderId = prefs.getString("USER_ID", "");
+
+        if (uploaderId.isEmpty() || classId.isEmpty() || subjectId.isEmpty()) {
+            Toast.makeText(getContext(), "Missing user, class, or subject info", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ApiService.DocumentRequest request = new ApiService.DocumentRequest(classId, uploaderId, subjectId, title, url);
 
         RetrofitClient.getService().uploadDocument(request).enqueue(new Callback<Void>() {
             @Override
@@ -173,6 +224,7 @@ public class CourseDetailFragment extends Fragment {
                 if (response.isSuccessful()) {
                     Toast.makeText(getContext(), "Upload Successful!", Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
+                    loadDocuments(); // Refresh the list
                 } else {
                     Toast.makeText(getContext(), "Error: " + response.code(), Toast.LENGTH_SHORT).show();
                 }

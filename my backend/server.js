@@ -17,7 +17,7 @@ const client = new Client({
   }
 });
 
-// --- Connection Status ---
+// xem trạng thái kết nối
 client.connect()
   .then(() => console.log('Successful connection to Neon Database'))
   .catch(err => console.error('Connection error to Neon:', err.stack));
@@ -76,7 +76,7 @@ app.get('/api/subjects', async (req, res) => {
   }
 });
 
-// Enroll API (tự động thêm vào class luôn nên chỉ cần đăng ký môn)
+// Enroll API (tự động chọn lớp ít người nhất + check sĩ số tối đa)
 app.post('/api/enroll-auto', async (req, res) => {
   const { userId, subjectId } = req.body;
 
@@ -87,29 +87,46 @@ app.post('/api/enroll-auto', async (req, res) => {
   }
 
   try {
-    // 1: tìm lớp xem tồn tại chưa
-    const findClassQuery = 'SELECT id FROM class WHERE "subjectId" = $1 LIMIT 1';
+    // 1: Tìm lớp còn chỗ, ưu tiên lớp vắng)
+    const findClassQuery = `
+      SELECT c.id, c."maxCapacity", COUNT(e."studentId")::int AS enrollment_count
+      FROM class c
+      LEFT JOIN enrollment e ON e."classId" = c.id
+      WHERE c."subjectId" = $1
+      GROUP BY c.id, c."maxCapacity"
+      HAVING COUNT(e."studentId") < COALESCE(c."maxCapacity", 999)
+      ORDER BY enrollment_count ASC
+      LIMIT 1
+    `;
     const classResult = await client.query(findClassQuery, [subjectId]);
 
     if (classResult.rows.length === 0) {
-      return res.status(404).json({ message: "No open classes found for this subject!" });
+      return res.status(404).json({ message: "No open classes found or all classes are full!" });
     }
 
     const classId = classResult.rows[0].id;
+    const currentCount = classResult.rows[0].enrollment_count;
+    const maxCapacity = classResult.rows[0].maxCapacity;
 
-    // 2: check xem đã đăng ký trước môn này chưa
-    const checkQuery = 'SELECT * FROM enrollment WHERE "studentId" = $1 AND "classId" = $2';
-    const checkResult = await client.query(checkQuery, [userId, classId]);
+    console.log(`Selected class ${classId} (${currentCount}/${maxCapacity || 'unlimited'} students)`);
+
+    // 2: Check xem đã đăng ký môn này chưa (kiểm tra TẤT CẢ các lớp của môn)
+    const checkQuery = `
+      SELECT e.id FROM enrollment e
+      JOIN class c ON e."classId" = c.id
+      WHERE e."studentId" = $1 AND c."subjectId" = $2
+    `;
+    const checkResult = await client.query(checkQuery, [userId, subjectId]);
 
     if (checkResult.rows.length > 0) {
       return res.status(400).json({ message: "You have already enrolled in this course!" });
     }
 
-    // 3: Insert vào enrolment table
+    // 3: Insert vào enrollment table
     const insertQuery = 'INSERT INTO enrollment ("studentId", "classId") VALUES ($1, $2)';
     await client.query(insertQuery, [userId, classId]);
 
-    console.log(`Enrollment success: User ${userId} -> Class ${classId}`);
+    console.log(`Enrollment success: User ${userId} -> Class ${classId} (${currentCount + 1}/${maxCapacity || 'unlimited'})`);
     res.json({ message: "Enrollment successful!" });
 
   } catch (err) {
@@ -149,7 +166,7 @@ app.get('/api/my-courses/:userId', async (req, res) => {
   }
 });
 
-// Lecturer Teaching Classes - LẤY DANH SÁCH LỚP GIẢNG VIÊN ĐANG DẠY
+// LẤY DANH SÁCH LỚP GIẢNG VIÊN ĐANG DẠY
 app.get('/api/lecturer-courses/:userId', async (req, res) => {
   const { userId } = req.params;
   console.log("Fetching teaching classes for Lecturer ID:", userId);
@@ -177,7 +194,7 @@ app.get('/api/lecturer-courses/:userId', async (req, res) => {
   }
 });
 
-// Lecturer Subjects - LẤY DANH SÁCH MÔN HỌC GIẢNG VIÊN ĐANG DẠY
+// LẤY DANH SÁCH MÔN HỌC GIẢNG VIÊN ĐANG DẠY
 app.get('/api/lecturer-subjects/:lecturerId', async (req, res) => {
   const { lecturerId } = req.params;
   console.log("Fetching subjects for Lecturer ID:", lecturerId);
@@ -199,7 +216,7 @@ app.get('/api/lecturer-subjects/:lecturerId', async (req, res) => {
   }
 });
 
-// Lecturer Subject Classes - LẤY DANH SÁCH LỚP CỦA MÔN HỌC DO GIẢNG VIÊN DẠY
+// LẤY DANH SÁCH LỚP CỦA MÔN HỌC DO GIẢNG VIÊN DẠY
 app.get('/api/lecturer-subject-classes/:lecturerId/:subjectId', async (req, res) => {
   const { lecturerId, subjectId } = req.params;
   console.log(`Fetching classes for Lecturer ${lecturerId}, Subject ${subjectId}`);
@@ -222,7 +239,7 @@ app.get('/api/lecturer-subject-classes/:lecturerId/:subjectId', async (req, res)
   }
 });
 
-// Class Students - LẤY DANH SÁCH SINH VIÊN TRONG LỚP
+// LẤY DANH SÁCH SINH VIÊN TRONG LỚP
 app.get('/api/class-students/:classId', async (req, res) => {
   const { classId } = req.params;
   console.log("Fetching students for Class ID:", classId);
@@ -262,8 +279,6 @@ app.get('/api/schedule/:userId', async (req, res) => {
     let query = "";
 
     // 2. Chọn Query dựa trên Role
-    // Sửa đổi: Dùng TO_CHAR để định dạng ngày tháng chuẩn ISO 8601 (có chữ T) để Android parse được.
-    // Dùng LEFT JOIN cho room và user_profile để tránh mất dữ liệu nếu thông tin đó chưa có.
     if (role === 'LECTURER') {
       // Dành cho Giảng viên
       query = `
@@ -273,7 +288,8 @@ app.get('/api/schedule/:userId', async (req, res) => {
           TO_CHAR(s."startTime", 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "startTime", 
           TO_CHAR(s."endTime", 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "endTime", 
           COALESCE(r.name, 'N/A') AS "roomName", 
-          COALESCE(up."fullName", 'Lecturer') AS "lecturerName"
+          COALESCE(up."fullName", 'Lecturer') AS "lecturerName",
+          s.category AS "category"
         FROM class c
         JOIN class_schedule s ON c.id = s."classId"
         LEFT JOIN room r ON s."roomId" = r.id
@@ -290,7 +306,8 @@ app.get('/api/schedule/:userId', async (req, res) => {
           TO_CHAR(s."startTime", 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "startTime", 
           TO_CHAR(s."endTime", 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "endTime", 
           COALESCE(r.name, 'N/A') AS "roomName", 
-          COALESCE(up."fullName", 'Lecturer') AS "lecturerName"
+          COALESCE(up."fullName", 'Lecturer') AS "lecturerName",
+          s.category AS "category"
         FROM enrollment e
         JOIN class c ON e."classId" = c.id
         JOIN class_schedule s ON c.id = s."classId"
@@ -317,9 +334,6 @@ app.get('/api/profile/:userId', async (req, res) => {
   console.log("Fetching profile for User ID:", userId);
 
   try {
-    // Truy vấn bảng user_profile (giả sử bảng này chứa studentCode và major)
-    // Cần đảm bảo tên cột trong DB khớp với tên biến ở đây
-    // Dùng dấu " " nếu tên cột trong Postgres có chữ hoa
     const query = `
       SELECT 
         id, 
@@ -357,9 +371,7 @@ app.get('/api/profile/:userId', async (req, res) => {
   }
 });
 
-// ==========================================
-//             API XEM ĐIỂM (GRADES)
-// ==========================================
+// xem điểm
 app.get('/api/grades/:studentId', async (req, res) => {
   const { studentId } = req.params;
   console.log("Fetching grades for student:", studentId);
@@ -388,20 +400,17 @@ app.get('/api/grades/:studentId', async (req, res) => {
   }
 });
 
-// ==========================================
-//             API QUẢN LÝ TÀI LIỆU
-// ==========================================
-
+// document
 app.post('/api/document', async (req, res) => {
-  const { courseName, title, url } = req.body; // Dữ liệu từ App gửi lên
+  const { classId, uploaderId, subjectId, title, url } = req.body; // Dữ liệu từ App gửi lên
 
-  if (!courseName || !title || !url) {
+  if (!classId || !uploaderId || !subjectId || !title || !url) {
     return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin" });
   }
 
   try {
     // INSERT khớp với cấu trúc bảng thực tế trong ảnh của bạn
-    // Map 'url' vào cột 'description', 'courseName' vào 'classid' (hoặc subjectid tùy logic của bạn)
+    // Map 'url' vào cột 'description'
     const query = `
       INSERT INTO document (
         classid, 
@@ -417,17 +426,16 @@ app.post('/api/document', async (req, res) => {
       RETURNING *
     `;
 
-    // Lưu ý: uploadedby và classid cần ID thực tế (VARCHAR). Ở đây tạm dùng courseName/Dummy.
     const values = [
-      courseName,             // classid
-      'lecturer_system',      // uploadedby (ID người dùng)
+      classId,                // classid
+      uploaderId,             // uploadedby (ID người dùng)
       title,                  // title
       url,                    // description (Lưu link tài liệu vào đây)
       Buffer.from(''),        // filedata (bytea không được để null theo ảnh)
       'link_document.txt',    // filename
       'text/plain',           // mimetype
       0,                      // filesize
-      courseName              // subjectid
+      subjectId               // subjectid
     ];
 
     const result = await client.query(query, values);
@@ -437,6 +445,27 @@ app.post('/api/document', async (req, res) => {
   } catch (err) {
     console.error("Lỗi Database:", err.message);
     res.status(500).json({ message: "Lỗi tương thích bảng: " + err.message });
+  }
+});
+
+// Get Documents
+app.get('/api/documents/:classId', async (req, res) => {
+  const { classId } = req.params;
+  console.log(`Fetching documents for class: ${classId}`);
+
+  try {
+    const query = `
+      SELECT id, title, description, createdat 
+      FROM document 
+      WHERE classid = $1 
+      ORDER BY createdat DESC
+    `;
+    const result = await client.query(query, [classId]);
+    console.log(`Found ${result.rows.length} documents.`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Get Documents Error:", err);
+    res.status(500).json({ message: "Error fetching documents" });
   }
 });
 
@@ -755,7 +784,7 @@ app.get('/api/students/search', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-// --- Start Server ---
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${PORT}`);

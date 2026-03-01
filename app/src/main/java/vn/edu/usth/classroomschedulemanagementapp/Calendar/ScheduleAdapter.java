@@ -11,7 +11,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 import vn.edu.usth.classroomschedulemanagementapp.R;
-// Import Activity điểm danh của Lecturer
 import vn.edu.usth.classroomschedulemanagementapp.Lecturer.Attendance.AttendanceActivity;
 
 public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHolder> {
@@ -42,6 +41,13 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
         holder.tvRoom.setText(item.room);
         holder.tvLecturer.setText("Lecturer: " + item.lecturer);
 
+        // Hiển thị nhãn EXAM nếu category là EXAM
+        if ("EXAM".equalsIgnoreCase(item.getCategory())) {
+            holder.tvCategory.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvCategory.setVisibility(View.GONE);
+        }
+
         // Kiểm tra role từ SharedPreferences
         Context context = holder.itemView.getContext();
         SharedPreferences prefs = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
@@ -62,7 +68,6 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
                 context.startActivity(intent);
             });
         } else {
-            // Student không thấy nút điểm danh trên lịch
             holder.btnViewAttendance.setVisibility(View.GONE);
         }
     }
@@ -74,8 +79,8 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
 
-        TextView tvSubject, tvTime, tvRoom, tvLecturer;
-        TextView btnViewAttendance; // Đã thêm khai báo cho nút View Attendance
+        TextView tvSubject, tvTime, tvRoom, tvLecturer, tvCategory;
+        TextView btnViewAttendance;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -83,7 +88,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
             tvTime = itemView.findViewById(R.id.tvTime);
             tvRoom = itemView.findViewById(R.id.tvRoom);
             tvLecturer = itemView.findViewById(R.id.tvLecturer);
-            // Ánh xạ ID btnViewAttendance từ item_schedule.xml
+            tvCategory = itemView.findViewById(R.id.tvCategory);
             btnViewAttendance = itemView.findViewById(R.id.btnViewAttendance);
         }
     }

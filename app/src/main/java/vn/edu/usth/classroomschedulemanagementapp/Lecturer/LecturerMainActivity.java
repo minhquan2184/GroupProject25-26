@@ -98,7 +98,9 @@ public class LecturerMainActivity extends AppCompatActivity {
         TextView tvId = headerView.findViewById(R.id.tv_user_id);
         TextView tvDept = headerView.findViewById(R.id.tv_user_major);
 
-        if (userId.isEmpty()) return;
+        if (userId.isEmpty()) {
+            return;
+        }
 
         // Sử dụng chung API getProfile vì server trả về linh hoạt theo userId
         RetrofitClient.getService().getProfile(userId).enqueue(new Callback<UserProfile>() {
@@ -106,13 +108,21 @@ public class LecturerMainActivity extends AppCompatActivity {
             public void onResponse(Call<UserProfile> call, Response<UserProfile> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     UserProfile profile = response.body();
-                    if (tvName != null) tvName.setText(profile.getFullName());
-                    if (tvId != null) tvId.setText("Staff ID: " + profile.getStudentCode());
-                    if (tvDept != null) tvDept.setText("Dept: " + profile.getMajor());
+                    if (tvName != null) {
+                        tvName.setText(profile.getFullName());
+                    }
+                    if (tvId != null) {
+                        tvId.setText("Staff ID: " + profile.getStudentCode());
+                    }
+                    if (tvDept != null) {
+                        tvDept.setText("Dept: " + profile.getMajor());
+                    }
                 }
             }
+
             @Override
-            public void onFailure(Call<UserProfile> call, Throwable t) {}
+            public void onFailure(Call<UserProfile> call, Throwable t) {
+            }
         });
     }
 }

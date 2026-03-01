@@ -13,6 +13,7 @@ import java.util.List;
 import vn.edu.usth.classroomschedulemanagementapp.R;
 
 public class LecturerClassAdapter extends RecyclerView.Adapter<LecturerClassAdapter.ViewHolder> {
+
     private List<ClassModel> classList;
 
     public LecturerClassAdapter(List<ClassModel> classList) {
@@ -58,6 +59,7 @@ public class LecturerClassAdapter extends RecyclerView.Adapter<LecturerClassAdap
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
+
         TextView tvClassName, tvRoom, tvTime;
         Button btnDetails;
 

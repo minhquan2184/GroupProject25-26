@@ -19,6 +19,7 @@ public class MyCoursesAdapter extends RecyclerView.Adapter<MyCoursesAdapter.Cour
 
     // 2. Tạo Interface để Fragment implements
     public interface OnItemClickListener {
+
         void onDetailClick(Subject subject);
     }
 
@@ -54,18 +55,21 @@ public class MyCoursesAdapter extends RecyclerView.Adapter<MyCoursesAdapter.Cour
     }
 
     @Override
-    public int getItemCount() { return courseList.size(); }
+    public int getItemCount() {
+        return courseList.size();
+    }
 
     static class CourseViewHolder extends RecyclerView.ViewHolder {
+
         TextView tvCourseName, tvProfessor, tvCredits;
         Button btnAction;
 
         public CourseViewHolder(@NonNull View itemView) {
             super(itemView);
             tvCourseName = itemView.findViewById(R.id.tvCourseName);
-            tvProfessor  = itemView.findViewById(R.id.tvProfessor);
-            tvCredits    = itemView.findViewById(R.id.tvCredits);
-            btnAction    = itemView.findViewById(R.id.btnDetail);
+            tvProfessor = itemView.findViewById(R.id.tvProfessor);
+            tvCredits = itemView.findViewById(R.id.tvCredits);
+            btnAction = itemView.findViewById(R.id.btnDetail);
         }
     }
 }

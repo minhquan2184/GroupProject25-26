@@ -24,12 +24,15 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import vn.edu.usth.classroomschedulemanagementapp.R;
 import vn.edu.usth.classroomschedulemanagementapp.RetrofitClient;
+import vn.edu.usth.classroomschedulemanagementapp.ApiService;
 
 public class CourseDetailFragment extends Fragment {
 
     private RecyclerView rcvAttendance;
     private AttendanceAdapter adapter;
     private List<Attendance> attendanceList;
+    private vn.edu.usth.classroomschedulemanagementapp.DocumentAdapter documentAdapter;
+    private List<ApiService.DocumentResponse> documentList = new ArrayList<>();
     private String classId;
     private String courseName;
 
@@ -82,9 +85,68 @@ public class CourseDetailFragment extends Fragment {
         adapter = new AttendanceAdapter(attendanceList);
         rcvAttendance.setAdapter(adapter);
 
+        // Setup RecyclerView Document (nếu có id trong layout)
+        RecyclerView rcvDocuments = view.findViewById(R.id.rcvDocuments);
+        TextView tvNoDocs = view.findViewById(R.id.tvNoDocs);
+        if (rcvDocuments != null) {
+            rcvDocuments.setLayoutManager(new LinearLayoutManager(getContext()));
+            documentList = new ArrayList<>();
+            documentAdapter = new vn.edu.usth.classroomschedulemanagementapp.DocumentAdapter(getContext(), documentList);
+            rcvDocuments.setAdapter(documentAdapter);
+
+            // Fetch documents
+            if (classId != null && !classId.isEmpty()) {
+                fetchDocuments(rcvDocuments, tvNoDocs);
+            }
+        }
+
         fetchAttendance();
 
         return view;
+    }
+
+    private void fetchDocuments(RecyclerView rcvDocuments, TextView tvNoDocs) {
+        RetrofitClient.getService().getDocuments(classId).enqueue(new Callback<List<ApiService.DocumentResponse>>() {
+            @Override
+            public void onResponse(Call<List<ApiService.DocumentResponse>> call, Response<List<ApiService.DocumentResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    documentList.clear();
+                    documentList.addAll(response.body());
+                    if (documentAdapter != null) {
+                        documentAdapter.notifyDataSetChanged();
+                    }
+
+                    if (documentList.isEmpty()) {
+                        if (tvNoDocs != null) {
+                            tvNoDocs.setVisibility(View.VISIBLE);
+                        }
+                        rcvDocuments.setVisibility(View.GONE);
+                    } else {
+                        if (tvNoDocs != null) {
+                            tvNoDocs.setVisibility(View.GONE);
+                        }
+                        rcvDocuments.setVisibility(View.VISIBLE);
+                    }
+                } else {
+                    android.util.Log.e("DOC_DEBUG", "Failed to load documents");
+                    Toast.makeText(getContext(), "Error API docs: " + response.code(), Toast.LENGTH_LONG).show();
+                    if (tvNoDocs != null) {
+                        tvNoDocs.setVisibility(View.VISIBLE);
+                    }
+                    rcvDocuments.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<ApiService.DocumentResponse>> call, Throwable t) {
+                android.util.Log.e("DOC_DEBUG", "Network failure: " + t.getMessage());
+                Toast.makeText(getContext(), "Network error docs: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                if (tvNoDocs != null) {
+                    tvNoDocs.setVisibility(View.VISIBLE);
+                }
+                rcvDocuments.setVisibility(View.GONE);
+            }
+        });
     }
 
     private void fetchAttendance() {

@@ -32,7 +32,6 @@ public class AccountInfoFragment extends Fragment {
     private List<StudentGrade> gradeList;
     private Button btnLogout;
 
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -53,17 +52,23 @@ public class AccountInfoFragment extends Fragment {
         btnLogout.setOnClickListener(v -> performLogout());
         return view;
     }
+
     private void performLogout() {
-        if (getActivity() == null) return;
+        if (getActivity() == null) {
+            return;
+        }
         Intent intent = new Intent(getActivity(), LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
 
     }
+
     private void fetchData() {
         SharedPreferences prefs = getActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String userId = prefs.getString("USER_ID", "");
-        if (userId.isEmpty()) return;
+        if (userId.isEmpty()) {
+            return;
+        }
 
         // 1. Lấy thông tin cá nhân
         RetrofitClient.getService().getProfile(userId).enqueue(new Callback<UserProfile>() {
@@ -76,8 +81,10 @@ public class AccountInfoFragment extends Fragment {
                     tvMajor.setText("Major: " + user.getMajor());
                 }
             }
+
             @Override
-            public void onFailure(Call<UserProfile> call, Throwable t) { }
+            public void onFailure(Call<UserProfile> call, Throwable t) {
+            }
         });
 
         // 2. Lấy điểm
@@ -90,6 +97,7 @@ public class AccountInfoFragment extends Fragment {
                     adapter.notifyDataSetChanged();
                 }
             }
+
             @Override
             public void onFailure(Call<List<StudentGrade>> call, Throwable t) {
                 Toast.makeText(getContext(), "Error loading grades", Toast.LENGTH_SHORT).show();

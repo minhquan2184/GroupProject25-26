@@ -44,6 +44,7 @@ import vn.edu.usth.classroomschedulemanagementapp.R;
 import vn.edu.usth.classroomschedulemanagementapp.RetrofitClient;
 
 public class CalendarFragment extends Fragment {
+
     private CalendarView monthCalendarView;
     private WeekCalendarView weekCalendarView;
     private TextView tvMonthYear, tvDateSelected;
@@ -57,7 +58,8 @@ public class CalendarFragment extends Fragment {
     // Map lưu trữ: Ngày -> Danh sách lịch học
     private HashMap<LocalDate, List<Schedule>> database = new HashMap<>();
 
-    public CalendarFragment() {}
+    public CalendarFragment() {
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -80,6 +82,7 @@ public class CalendarFragment extends Fragment {
 
         // --- SETUP CALENDAR VIEW ---
         class MonthDayViewContainer extends ViewContainer {
+
             TextView textView;
             View dotView, frameLayout;
             CalendarDay day;
@@ -113,6 +116,7 @@ public class CalendarFragment extends Fragment {
         });
 
         class WeekDayViewContainer extends ViewContainer {
+
             TextView textView;
             View dotView, frameLayout;
             WeekDay day;
@@ -269,7 +273,8 @@ public class CalendarFragment extends Fragment {
                         timeString,
                         item.getRoomName(),
                         item.getLecturerName(),
-                        item.getStartTime()
+                        item.getStartTime(),
+                        item.getCategory()
                 );
 
                 // Thêm vào Map
@@ -290,7 +295,6 @@ public class CalendarFragment extends Fragment {
     }
 
     // --- CÁC HÀM UI ---
-
     private void bindDayView(TextView textView, View frameLayout, View dotView, LocalDate date, boolean isCurrentMonth) {
         textView.setText(String.valueOf(date.getDayOfMonth()));
 
@@ -300,7 +304,7 @@ public class CalendarFragment extends Fragment {
             // Highlight ngày được chọn
             if (date.equals(selectedDate)) {
                 frameLayout.setBackgroundResource(R.drawable.ic_dot); // Hoặc background tròn màu xanh
-                frameLayout.getBackground().setTint(getResources().getColor(R.color.deep_blue, null));
+                frameLayout.getBackground().mutate().setTint(getResources().getColor(R.color.deep_blue, null));
                 textView.setTextColor(Color.WHITE);
             } else {
                 frameLayout.setBackground(null);
@@ -320,7 +324,9 @@ public class CalendarFragment extends Fragment {
     }
 
     private void selectDate(LocalDate date) {
-        if (selectedDate.equals(date)) return;
+        if (selectedDate.equals(date)) {
+            return;
+        }
 
         LocalDate oldDate = selectedDate;
         selectedDate = date;

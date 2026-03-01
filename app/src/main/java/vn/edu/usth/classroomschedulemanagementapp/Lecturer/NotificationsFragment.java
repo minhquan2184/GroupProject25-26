@@ -41,7 +41,7 @@ public class NotificationsFragment extends Fragment {
             /* Ghi chú: Sau này khi bạn tạo NotificationAdapter, hãy bỏ comment dòng dưới:
                NotificationAdapter adapter = new NotificationAdapter(yourDataList);
                recyclerView.setAdapter(adapter);
-            */
+             */
         }
 
         return view;

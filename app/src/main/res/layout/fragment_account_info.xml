@@ -72,7 +72,7 @@
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="@android:color/white"
-        android:backgroundTint="@color/deep_blue"
+        android:backgroundTint="#D32F2F"
         android:layout_margin="16dp"/>
 
 </LinearLayout>
