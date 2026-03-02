@@ -81,7 +81,7 @@ public interface ApiService {
         public String id;
         public String title;
         public String description; // URL is stored in description
-        public String createdat;
+
     }
 
     class DocumentRequest {

@@ -1,3 +1,5 @@
+// nhét hết vào file này thôi là dc nha ko cần chia file làm j đâu
+// 
 require('dotenv').config();
 const express = require('express');
 const { Client } = require('pg');
@@ -17,12 +19,11 @@ const client = new Client({
   }
 });
 
-// xem trạng thái kết nối
 client.connect()
-  .then(() => console.log('Successful connection to Neon Database'))
-  .catch(err => console.error('Connection error to Neon:', err.stack));
+  .then(() => console.log('Successful connection to Database'))
+  .catch(err => console.error('Connection error to Database:', err.stack));
 
-//                       API 
+// API 
 
 //Login API
 app.post('/api/login', async (req, res) => {
@@ -38,21 +39,17 @@ app.post('/api/login', async (req, res) => {
 
     const result = await client.query(query, values);
 
-    // Check if user exists
     if (result.rows.length === 0) {
       return res.status(401).json({ message: "Email does not exist!" });
     }
 
     const user = result.rows[0];
 
-    // Check password (Simple comparison)
     if (user.password !== password) {
       return res.status(401).json({ message: "Incorrect password" });
     }
 
-    // Login successful -> Return user info (excluding password)
     const { password: _, ...userWithoutPass } = user;
-
     console.log(`User ${email} logged in successfully!`);
     res.json(userWithoutPass);
 
@@ -65,7 +62,6 @@ app.post('/api/login', async (req, res) => {
 // Subjects API
 app.get('/api/subjects', async (req, res) => {
   try {
-    // Get all subjects, sorted by name
     const query = 'SELECT * FROM subject ORDER BY name ASC';
     const result = await client.query(query);
 
@@ -76,7 +72,7 @@ app.get('/api/subjects', async (req, res) => {
   }
 });
 
-// Enroll API (tự động chọn lớp ít người nhất + check sĩ số tối đa)
+// Enroll API (tôi mới thêm tự động chọn lớp ít người nhất + check sĩ số tối đa)
 app.post('/api/enroll-auto', async (req, res) => {
   const { userId, subjectId } = req.body;
 
@@ -87,7 +83,7 @@ app.post('/api/enroll-auto', async (req, res) => {
   }
 
   try {
-    // 1: Tìm lớp còn chỗ, ưu tiên lớp vắng)
+    // chỗ này để tìm lớp còn chỗ, lớp ít ng dc ưu tiên + ít nhất 10ng 1 lớp
     const findClassQuery = `
       SELECT c.id, c."maxCapacity", COUNT(e."studentId")::int AS enrollment_count
       FROM class c
@@ -95,7 +91,10 @@ app.post('/api/enroll-auto', async (req, res) => {
       WHERE c."subjectId" = $1
       GROUP BY c.id, c."maxCapacity"
       HAVING COUNT(e."studentId") < COALESCE(c."maxCapacity", 999)
-      ORDER BY enrollment_count ASC
+      ORDER BY 
+        CASE WHEN COUNT(e."studentId") < 10 THEN 0 ELSE 1 END ASC,
+        CASE WHEN COUNT(e."studentId") < 10 THEN COUNT(e."studentId") ELSE 0 END DESC,
+        COUNT(e."studentId") ASC
       LIMIT 1
     `;
     const classResult = await client.query(findClassQuery, [subjectId]);
@@ -110,7 +109,7 @@ app.post('/api/enroll-auto', async (req, res) => {
 
     console.log(`Selected class ${classId} (${currentCount}/${maxCapacity || 'unlimited'} students)`);
 
-    // 2: Check xem đã đăng ký môn này chưa (kiểm tra TẤT CẢ các lớp của môn)
+    // Check trùng lặp khi đki môn (đọc 1 lượt các lớp của môn)
     const checkQuery = `
       SELECT e.id FROM enrollment e
       JOIN class c ON e."classId" = c.id
@@ -122,7 +121,7 @@ app.post('/api/enroll-auto', async (req, res) => {
       return res.status(400).json({ message: "You have already enrolled in this course!" });
     }
 
-    // 3: Insert vào enrollment table
+    // Insert vào enrollment table
     const insertQuery = 'INSERT INTO enrollment ("studentId", "classId") VALUES ($1, $2)';
     await client.query(insertQuery, [userId, classId]);
 
@@ -138,7 +137,7 @@ app.post('/api/enroll-auto', async (req, res) => {
 // MyCourse API (Fetch enrolled courses)
 app.get('/api/my-courses/:userId', async (req, res) => {
   const { userId } = req.params;
-  console.log("Fetching your courses (MyCourses) for User ID:", userId);
+  console.log("Fetching courses for User ID:", userId);
 
   try {
     const query = `
@@ -400,6 +399,30 @@ app.get('/api/grades/:studentId', async (req, res) => {
   }
 });
 
+// Nhập điểm (Có validate không vượt quá 20)
+app.post('/api/grades/submit', async (req, res) => {
+  const { enrollmentId, itemId, score } = req.body;
+
+  // Validate điểm số không vượt quá 20
+  if (score > 20) {
+    return res.status(400).json({ message: "Điểm không hợp lệ: Điểm số không được vượt quá 20!" });
+  }
+
+  try {
+    const query = `
+      INSERT INTO grade_records ("enrollmentId", "itemId", "score")
+      VALUES ($1, $2, $3)
+      ON CONFLICT ("enrollmentId", "itemId") 
+      DO UPDATE SET score = EXCLUDED.score
+    `;
+    await client.query(query, [enrollmentId, itemId, score]);
+    res.json({ message: "Nhập điểm thành công!" });
+  } catch (err) {
+    console.error("Submit Grade Error:", err);
+    res.status(500).json({ message: "Lỗi lưu điểm" });
+  }
+});
+
 // document
 app.post('/api/document', async (req, res) => {
   const { classId, uploaderId, subjectId, title, url } = req.body; // Dữ liệu từ App gửi lên
@@ -501,7 +524,7 @@ app.get('/api/attendance', async (req, res) => {
   }
 });
 
-// Submit Attendance - LƯU ĐÚNG NGÀY HỌC
+// lưu điểm danh
 app.post('/api/attendance/submit', async (req, res) => {
   const { scheduleId, records } = req.body;
   console.log(` Saving attendance for schedule: ${scheduleId}, Records: ${records.length}`);
@@ -513,7 +536,6 @@ app.post('/api/attendance/submit', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    //  BƯỚC 1: Lấy startTime từ class_schedule
     const scheduleQuery = `
       SELECT "startTime" 
       FROM class_schedule 
@@ -530,7 +552,7 @@ app.post('/api/attendance/submit', async (req, res) => {
     const scheduleStartTime = scheduleResult.rows[0].startTime;
     console.log(` Schedule date: ${scheduleStartTime}`);
 
-    //  BƯỚC 2: Insert/Update với ĐÚNG NGÀY HỌC
+
     for (const record of records) {
       if (!record.studentId || !record.status) {
         console.warn('️ Skipping invalid record:', record);
@@ -545,8 +567,6 @@ app.post('/api/attendance/submit', async (req, res) => {
           status = EXCLUDED.status, 
           check_in_time = EXCLUDED.check_in_time
       `;
-
-      //  SỬ DỤNG scheduleStartTime (ngày học) thay vì CURRENT_TIMESTAMP
       const values = [scheduleId, record.studentId, record.status, scheduleStartTime];
       await client.query(query, values);
     }
@@ -562,7 +582,7 @@ app.post('/api/attendance/submit', async (req, res) => {
   }
 });
 
-// Add Student to Attendance - LƯU ĐÚNG NGÀY HỌC
+// thêm học sinh (attendance)
 app.post('/api/attendance/add-student', async (req, res) => {
   const { scheduleId, studentId } = req.body;
   console.log(` Adding student ${studentId} to schedule ${scheduleId}`);
